@@ -583,11 +583,37 @@
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    // Remove the data:mime;base64, prefix
-                    const base64 = e.target.result.split(',')[1];
-                    resolve(base64);
+                    try {
+                        const result = e.target.result;
+                        console.log('File read result type:', typeof result);
+                        console.log('File read result length:', result.length);
+                        
+                        // Remove the data:mime;base64, prefix
+                        const base64 = result.split(',')[1];
+                        console.log('Base64 length after split:', base64.length);
+                        
+                        // Validate base64
+                        if (!base64 || base64.length === 0) {
+                            throw new Error('Failed to extract base64 data from file');
+                        }
+                        
+                        // Test if base64 is valid
+                        try {
+                            atob(base64.substring(0, Math.min(100, base64.length)));
+                        } catch (e) {
+                            throw new Error('Invalid base64 encoding detected');
+                        }
+                        
+                        resolve(base64);
+                    } catch (error) {
+                        console.error('File reading error:', error);
+                        reject(error);
+                    }
                 };
-                reader.onerror = reject;
+                reader.onerror = (error) => {
+                    console.error('FileReader error:', error);
+                    reject(error);
+                };
                 reader.readAsDataURL(file);
             });
         }
