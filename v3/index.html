@@ -530,12 +530,32 @@
                 const data = await response.json();
                 showDebug('Response received: ' + JSON.stringify(data, null, 2));
 
-                if (data.success) {
+                // Improved response handling
+                console.log('Response data:', data);
+                
+                // Check for various success indicators
+                const isSuccess = data.success === true || 
+                                data.success === "true" || 
+                                response.ok || 
+                                (data.message && data.message.includes('successfully'));
+                
+                if (isSuccess) {
                     showResult('🎉 Success! Your optimized resume has been sent to your email. Check your inbox in a few minutes.', 'success');
                     form.reset();
                     fileName.style.display = 'none';
                 } else {
-                    showResult(`❌ ${data.message || 'An error occurred. Please try again.'}`, 'error');
+                    // Handle different error response formats
+                    let errorMessage = 'An error occurred. Please try again.';
+                    
+                    if (data.error) {
+                        errorMessage = data.error;
+                    } else if (data.message) {
+                        errorMessage = data.message;
+                    } else if (typeof data === 'string') {
+                        errorMessage = data;
+                    }
+                    
+                    showResult(`❌ ${errorMessage}`, 'error');
                 }
 
             } catch (error) {
