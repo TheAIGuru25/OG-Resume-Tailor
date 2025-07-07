@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Resume Optimizer - Free & Fast</title>
+    <title>AI Resume Optimizer V3 - Enhanced Multi-Format Support</title>
     <style>
         * {
             margin: 0;
@@ -42,12 +42,52 @@
             opacity: 0.9;
         }
 
+        .version-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            display: inline-block;
+        }
+
         .form-container {
             background: white;
             border-radius: 20px;
             padding: 40px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             backdrop-filter: blur(10px);
+        }
+
+        .supported-formats {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+        }
+
+        .supported-formats h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .supported-formats ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .supported-formats li {
+            margin-bottom: 8px;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .supported-formats li::before {
+            content: '✅';
+            position: absolute;
+            left: 0;
         }
 
         .form-group {
@@ -213,6 +253,8 @@
             font-family: monospace;
             font-size: 0.9rem;
             text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
         .features {
@@ -267,11 +309,26 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 AI Resume Optimizer</h1>
-            <p>Get your resume ATS-ready in seconds - completely free!</p>
+            <h1>🚀 AI Resume Optimizer V2</h1>
+            <p>Enhanced multi-format support - PDF, DOC, DOCX & TXT!</p>
+            <div class="version-badge">✨ NEW: Universal File Support</div>
         </div>
 
         <div class="form-container">
+            <div class="supported-formats">
+                <h3>✅ Supported File Formats:</h3>
+                <ul>
+                    <li><strong>PDF</strong> - Portable Document Format</li>
+                    <li><strong>DOC</strong> - Microsoft Word (legacy)</li>
+                    <li><strong>DOCX</strong> - Microsoft Word (modern)</li>
+                    <li><strong>TXT</strong> - Plain text files</li>
+                </ul>
+                <p style="margin-top: 15px; font-size: 0.95rem; color: #666;">
+                    <strong>Note:</strong> PDF and Word files are processed through our advanced extraction service. 
+                    First-time processing may take 60-90 seconds as the service wakes up.
+                </p>
+            </div>
+
             <form id="resumeForm">
                 <div class="form-group">
                     <label for="resume">📄 Upload Your Resume</label>
@@ -319,8 +376,8 @@
 
             <div class="loading" id="loading">
                 <div class="loading-spinner"></div>
-                <p>🤖 AI is analyzing your resume and job posting...<br>
-                <small>This usually takes 30-60 seconds</small></p>
+                <p>🤖 AI is processing your resume...<br>
+                <small>PDF/Word files: 60-90 seconds | Text files: 30-45 seconds</small></p>
             </div>
 
             <div class="result" id="result"></div>
@@ -334,9 +391,9 @@
                 <p>Keywords matched to beat applicant tracking systems</p>
             </div>
             <div class="feature">
-                <div class="feature-icon">⚡</div>
-                <h3>Lightning Fast</h3>
-                <p>Get results in under 60 seconds</p>
+                <div class="feature-icon">📄</div>
+                <h3>Multi-Format</h3>
+                <p>Supports PDF, Word documents, and text files</p>
             </div>
             <div class="feature">
                 <div class="feature-icon">🔒</div>
@@ -352,7 +409,7 @@
     </div>
 
     <script>
-        // Replace with your actual n8n webhook URL or API endpoint
+        // Production webhook URL
         const API_ENDPOINT = 'https://theaiguru.app.n8n.cloud/webhook-test/resume-optimizer-v2';
 
         const form = document.getElementById('resumeForm');
@@ -398,6 +455,20 @@
                     return;
                 }
 
+                // Check file type
+                const allowedTypes = ['application/pdf', 'application/msword', 
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+                    'text/plain'];
+                const extension = file.name.toLowerCase().split('.').pop();
+                const allowedExtensions = ['pdf', 'doc', 'docx', 'txt'];
+
+                if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(extension)) {
+                    showResult('❌ Unsupported file type. Please upload PDF, DOC, DOCX, or TXT files only.', 'error');
+                    fileInput.value = '';
+                    fileName.style.display = 'none';
+                    return;
+                }
+
                 fileName.textContent = `📎 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
                 fileName.style.display = 'block';
             }
@@ -424,19 +495,22 @@
             debug.style.display = 'none';
 
             try {
-                // Get file content based on type
-                const fileContent = await getFileContent(file);
+                // Get file content as base64 for all file types
+                const fileContent = await readFileAsBase64(file);
+                
+                // Determine file type
+                const fileType = getFileType(file);
                 
                 const payload = {
                     resume: fileContent,
                     jobUrl: jobUrl,
                     email: email,
                     fileName: file.name,
-                    fileType: file.type || getFileExtension(file.name)
+                    fileType: fileType
                 };
 
                 // Debug info
-                showDebug('Sending request to: ' + API_ENDPOINT + '\nPayload keys: ' + Object.keys(payload).join(', '));
+                showDebug(`Sending request to: ${API_ENDPOINT}\nFile: ${file.name} (${fileType})\nFile size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
 
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
@@ -446,29 +520,52 @@
                     body: JSON.stringify(payload)
                 });
 
-                showDebug('Response status: ' + response.status + '\nResponse ok: ' + response.ok);
+                showDebug(`Response status: ${response.status}\nResponse ok: ${response.ok}`);
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
                 }
 
                 const data = await response.json();
-                showDebug('Response data: ' + JSON.stringify(data, null, 2));
+                showDebug('Response received: ' + JSON.stringify(data, null, 2));
 
-                if (data.success) {
+                // Improved response handling
+                console.log('Response data:', data);
+                
+                // Check for various success indicators
+                const isSuccess = data.success === true || 
+                                data.success === "true" || 
+                                response.ok || 
+                                (data.message && data.message.includes('successfully'));
+                
+                if (isSuccess) {
                     showResult('🎉 Success! Your optimized resume has been sent to your email. Check your inbox in a few minutes.', 'success');
                     form.reset();
                     fileName.style.display = 'none';
                 } else {
-                    showResult(`❌ ${data.message || 'An error occurred. Please try again.'}`, 'error');
+                    // Handle different error response formats
+                    let errorMessage = 'An error occurred. Please try again.';
+                    
+                    if (data.error) {
+                        errorMessage = data.error;
+                    } else if (data.message) {
+                        errorMessage = data.message;
+                    } else if (typeof data === 'string') {
+                        errorMessage = data;
+                    }
+                    
+                    showResult(`❌ ${errorMessage}`, 'error');
                 }
 
             } catch (error) {
                 console.error('Error:', error);
-                showDebug('Error details: ' + error.message);
+                showDebug('Error details: ' + error.message + '\nStack: ' + error.stack);
                 
                 if (error.message.includes('Failed to fetch')) {
-                    showResult('❌ Connection error. This might be a CORS issue or the API endpoint is not accessible. Check your n8n webhook configuration.', 'error');
+                    showResult('❌ Connection error. Please check your internet connection and try again.', 'error');
+                } else if (error.message.includes('413')) {
+                    showResult('❌ File too large. Please use a smaller file (under 10MB).', 'error');
                 } else {
                     showResult(`❌ Error: ${error.message}`, 'error');
                 }
@@ -480,35 +577,63 @@
             }
         });
 
-        async function getFileContent(file) {
-            const extension = getFileExtension(file.name).toLowerCase();
-            
-            if (extension === 'txt') {
-                return await readFileAsText(file);
-            } else {
-                // For PDF, DOC, DOCX - convert to base64
-                return await readFileAsBase64(file);
+        function getFileType(file) {
+            // Use MIME type if available and valid
+            if (file.type) {
+                return file.type;
             }
-        }
-
-        function getFileExtension(filename) {
-            return filename.split('.').pop().toLowerCase();
-        }
-
-        function readFileAsText(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsText(file);
-            });
+            
+            // Fallback to extension-based detection
+            const extension = file.name.toLowerCase().split('.').pop();
+            switch (extension) {
+                case 'pdf':
+                    return 'application/pdf';
+                case 'doc':
+                    return 'application/msword';
+                case 'docx':
+                    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                case 'txt':
+                    return 'text/plain';
+                default:
+                    return 'text/plain';
+            }
         }
 
         function readFileAsBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
+                reader.onload = (e) => {
+                    try {
+                        const result = e.target.result;
+                        console.log('File read result type:', typeof result);
+                        console.log('File read result length:', result.length);
+                        
+                        // Remove the data:mime;base64, prefix
+                        const base64 = result.split(',')[1];
+                        console.log('Base64 length after split:', base64.length);
+                        
+                        // Validate base64
+                        if (!base64 || base64.length === 0) {
+                            throw new Error('Failed to extract base64 data from file');
+                        }
+                        
+                        // Test if base64 is valid
+                        try {
+                            atob(base64.substring(0, Math.min(100, base64.length)));
+                        } catch (e) {
+                            throw new Error('Invalid base64 encoding detected');
+                        }
+                        
+                        resolve(base64);
+                    } catch (error) {
+                        console.error('File reading error:', error);
+                        reject(error);
+                    }
+                };
+                reader.onerror = (error) => {
+                    console.error('FileReader error:', error);
+                    reject(error);
+                };
                 reader.readAsDataURL(file);
             });
         }
@@ -521,7 +646,9 @@
         }
 
         function showDebug(message) {
-            debug.textContent = message;
+            const timestamp = new Date().toLocaleTimeString();
+            const currentContent = debug.textContent;
+            debug.textContent = `[${timestamp}] ${message}\n\n${currentContent}`;
             debug.style.display = 'block';
         }
 
