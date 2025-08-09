@@ -646,11 +646,9 @@
         }
 
         function showDebug(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const currentContent = debug.textContent;
-            debug.textContent = `[${timestamp}] ${message}\n\n${currentContent}`;
-            debug.style.display = 'block';
-        }
+    // Only log to browser console, don't show to users
+    console.log('[DEBUG]', message);
+}
 
         // Add some interactive feedback
         document.querySelectorAll('.input-field').forEach(input => {
@@ -665,3 +663,4 @@
     </script>
 </body>
 </html>
+
